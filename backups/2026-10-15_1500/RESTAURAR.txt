@@ -1,0 +1,17 @@
+Backup del sistema SIB La Paz - 15/10/2026 15:02
+
+Contenido
+- siblpzor_wp726.sql : volcado completo de la base (49 tablas, 5652 filas), tomado antes de migrar a sib_lapaz_web.
+- codigo.zip         : carpetas laravel y angular (incluye laravel/.env con la clave de la base).
+                       No incluye node_modules ni vendor.
+
+Restaurar la base (CMD, con XAMPP encendido)
+  C:\xampp\mysql\bin\mysql.exe -uroot -e "CREATE DATABASE sib_lapaz_web CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci"
+  C:\xampp\mysql\bin\mysql.exe -uroot --default-character-set=utf8mb4 sib_lapaz_web < siblpzor_wp726.sql
+  (si root tiene clave, agregar -p)
+
+Restaurar el codigo
+  1. Descomprimir codigo.zip
+  2. cd laravel  ->  composer install
+  3. cd angular  ->  npm install
+  4. Revisar DB_DATABASE en laravel\.env
