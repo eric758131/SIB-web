@@ -143,6 +143,17 @@ class PostController extends Controller
             'categories' => ['array'],
             'categories.*' => ['integer', Rule::exists('term_taxonomy', 'term_taxonomy_id')->where('taxonomy', 'category')],
             'thumbnail_id' => ['nullable', 'integer'],
+            'gallery' => ['sometimes', 'array', 'max:40'],
+            'gallery.*' => ['integer', 'distinct'],
+            'links' => ['sometimes', 'array', 'max:20'],
+            'links.*.title' => ['required', 'string', 'max:200'],
+            'links.*.url' => ['required', 'string', 'max:1000', 'url:http,https'],
+        ], [
+            'gallery.max' => 'La galería admite hasta 40 imágenes.',
+            'links.max' => 'Puedes agregar hasta 20 enlaces.',
+            'links.*.title.required' => 'Escribe el texto de cada enlace.',
+            'links.*.url.required' => 'Escribe la dirección de cada enlace.',
+            'links.*.url.url' => 'Cada enlace debe ser una dirección web válida (https://…).',
         ]);
 
         // Without the "publish" permission posts wait for review, like WordPress authors/contributors.

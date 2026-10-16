@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\DB;
 class PostService
 {
     /**
-     * @param  array{title: string, slug?: ?string, content: string, excerpt?: ?string, status: string, published_at?: ?string, categories?: array<int>, thumbnail_id?: ?int}  $data
+     * @param  array{title: string, slug?: ?string, content: string, excerpt?: ?string, status: string, published_at?: ?string, categories?: array<int>, thumbnail_id?: ?int, gallery?: array<int>, links?: list<array{title: string, url: string}>}  $data
      */
     public function save(array $data, User $user, ?Post $post = null): Post
     {
@@ -78,6 +78,12 @@ class PostService
             $post->categories()->sync($categoryIds);
 
             $this->setThumbnail($post, $data['thumbnail_id'] ?? null);
+            if (array_key_exists('gallery', $data)) {
+                $this->setGallery($post, $data['gallery'] ?? []);
+            }
+            if (array_key_exists('links', $data)) {
+                $this->setLinks($post, $data['links'] ?? []);
+            }
             $post->setMeta('_edit_last', (string) $user->ID);
 
             TermTaxonomy::refreshCounts([...$oldCategoryIds, ...$categoryIds]);
@@ -137,6 +143,37 @@ class PostService
 
             TermTaxonomy::refreshCounts($categoryIds);
         });
+    }
+
+    /**
+     * Keep only existing images, in the given order.
+     *
+     * @param  array<int>  $ids
+     */
+    private function setGallery(Post $post, array $ids): void
+    {
+        $ids = array_values(array_unique(array_map('intval', $ids)));
+        $valid = Post::whereIn('ID', $ids)
+            ->where('post_type', 'attachment')
+            ->where('post_mime_type', 'like', 'image/%')
+            ->pluck('ID')
+            ->all();
+        $ids = array_values(array_filter($ids, fn ($id) => in_array($id, $valid)));
+
+        $post->setMeta(Post::GALLERY_META, $ids ? json_encode($ids) : null);
+    }
+
+    /**
+     * @param  list<array{title: string, url: string}>  $links
+     */
+    private function setLinks(Post $post, array $links): void
+    {
+        $links = array_values(array_map(fn (array $l) => [
+            'title' => trim($l['title']),
+            'url' => trim($l['url']),
+        ], $links));
+
+        $post->setMeta(Post::LINKS_META, $links ? json_encode($links, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : null);
     }
 
     private function setThumbnail(Post $post, ?int $attachmentId): void

@@ -24,6 +24,11 @@ use Illuminate\Support\Str;
  */
 class Post extends Model
 {
+    /** postmeta keys: JSON list of attachment IDs / JSON list of {title, url}. */
+    public const GALLERY_META = '_sib_gallery';
+
+    public const LINKS_META = '_sib_links';
+
     protected $table = 'posts';
 
     protected $primaryKey = 'ID';
@@ -105,7 +110,17 @@ class Post extends Model
             $html = implode("\n", array_map(fn ($p) => '<p>'.nl2br(trim($p)).'</p>', array_filter($paragraphs)));
         }
 
-        return trim($html);
+        return trim(self::publicUrl($html));
+    }
+
+    /**
+     * Uploads saved while APP_URL was http://localhost:8000 point to the developer's
+     * machine; turn them into relative /wp-content/... paths so they load from any domain.
+     */
+    public static function publicUrl(?string $value): ?string
+    {
+        return $value === null ? null
+            : preg_replace('#https?://(?:localhost|127\.0\.0\.1)(?::\d+)?(?=/wp-content/)#i', '', $value);
     }
 
     public function excerptText(int $length = 220): string
@@ -128,12 +143,50 @@ class Post extends Model
      */
     public function firstContentImage(): ?string
     {
-        return preg_match('/<img[^>]+src="([^"]+)"/i', $this->post_content ?? '', $m) ? $m[1] : null;
+        return preg_match('/<img[^>]+src="([^"]+)"/i', $this->post_content ?? '', $m) ? self::publicUrl($m[1]) : null;
     }
 
     public function coverUrl(): ?string
     {
-        return $this->thumbnail?->guid ?: $this->firstContentImage();
+        return self::publicUrl($this->thumbnail?->guid ?: $this->firstContentImage());
+    }
+
+    /**
+     * Extra images shown as a gallery under the content, in the chosen order.
+     *
+     * @return list<array{id: int, url: string, title: string}>
+     */
+    public function galleryImages(): array
+    {
+        $ids = json_decode($this->getMeta(self::GALLERY_META) ?? '[]', true) ?: [];
+        if (! $ids) {
+            return [];
+        }
+
+        $attachments = static::whereIn('ID', $ids)->where('post_type', 'attachment')->get()->keyBy('ID');
+
+        return collect($ids)
+            ->map(fn ($id) => $attachments->get($id))
+            ->filter()
+            ->map(fn (Post $a) => [
+                'id' => $a->ID,
+                'url' => self::publicUrl($a->guid),
+                'title' => html_entity_decode($a->post_title, ENT_QUOTES | ENT_HTML5, 'UTF-8'),
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Related links (agreements, documents, forms...) shown under the content.
+     *
+     * @return list<array{title: string, url: string}>
+     */
+    public function externalLinks(): array
+    {
+        $links = json_decode($this->getMeta(self::LINKS_META) ?? '[]', true);
+
+        return is_array($links) ? array_values($links) : [];
     }
 
     /**

@@ -38,6 +38,8 @@ class PostResource extends JsonResource
             'excerpt' => $this->excerptText(),
             'manual_excerpt' => $this->when($this->withContent, $this->post_excerpt),
             'content' => $this->when($this->withContent, fn () => $this->renderedContent()),
+            'gallery' => $this->when($this->withContent, fn () => $this->galleryImages()),
+            'links' => $this->when($this->withContent, fn () => $this->externalLinks()),
             'cover_image' => $this->relationLoaded('thumbnail') ? $this->coverUrl() : $this->firstContentImage(),
             'thumbnail_id' => $this->relationLoaded('thumbnail') ? $this->thumbnail?->ID : null,
             'status' => $this->post_status,

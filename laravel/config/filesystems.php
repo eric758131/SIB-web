@@ -49,10 +49,11 @@ return [
 
         // Same folder layout as WordPress (wp-content/uploads/YYYY/MM), so the
         // existing uploads folder can be copied here as-is when deploying.
+        // The URL is relative so it works from any domain (localhost, Tailscale, production).
         'wp_uploads' => [
             'driver' => 'local',
             'root' => public_path('wp-content/uploads'),
-            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/wp-content/uploads',
+            'url' => '/wp-content/uploads',
             'visibility' => 'public',
             'throw' => true,
             'report' => false,

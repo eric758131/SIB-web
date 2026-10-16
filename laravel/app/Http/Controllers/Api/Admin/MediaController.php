@@ -96,7 +96,7 @@ class MediaController extends Controller
         return [
             'id' => $attachment->ID,
             'title' => $attachment->post_title,
-            'url' => $attachment->guid,
+            'url' => Post::publicUrl($attachment->guid),
             'mime_type' => $attachment->post_mime_type,
             'is_image' => str_starts_with($attachment->post_mime_type, 'image/'),
             'uploaded_at' => $attachment->post_date?->toIso8601String(),
